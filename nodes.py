@@ -5,6 +5,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
+from std_msgs.msg import Bool
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -16,7 +17,9 @@ class LineFollower(Node):
         self.sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
         self.pub = self.create_publisher(Image, 'processed_img', 10)
         self.error_pub = self.create_publisher(Int32, 'error',10)
+        self.contour_pub = self.create_publisher(Bool,'FindContour',10)
         self.error = Int32()
+        self.contour = Bool()
         self.image_received_flag = False
         dt = 0.1
         self.timer = self.create_timer(dt, self.timer_callback)
@@ -39,6 +42,8 @@ class LineFollower(Node):
         
             contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours:
+                self.contour.data = True
+                self.contour_pub.publish(self.contour)
                 # Assume the largest contour is the line
                 largest_contour = max(contours, key=cv2.contourArea)
                 M = cv2.moments(largest_contour)
@@ -62,6 +67,8 @@ class LineFollower(Node):
                     self.error_pub.publish(self.error)
 
             else:
+                self.contour.data = False
+                self.contour_pub.publish(self.contour)
                 self.get_logger().info('No line detected')
 
             self.pub.publish(self.bridge.cv2_to_imgmsg(region_of_interest, 'bgr8'))
