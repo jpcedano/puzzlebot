@@ -12,8 +12,8 @@ class LineFollower(Node):
         self.contour_sub = self.create_subscription(Bool, 'contour', self.contour_callback, 10)
         self.signal_sub = self.create_subscription(Float32, '/traffic_light_signal', self.signal_callback, 10)
 
-        qos_profile = QoSProfile(depth=10,reliability = ReliabilityPolicy.BEST_EFFORT)
-        self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel',qos_profile)
+        qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+        self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', qos_profile)
 
         self.robot_vel = Twist()
         self.error = 0
@@ -31,18 +31,16 @@ class LineFollower(Node):
 
     def signal_callback(self, msg):
         self.signal = msg.data
-    
+
     def timer_callback(self):  
-        if self.contour == True:
-            self.robot_vel.angular.z = (-float(self.error) / 200) * self.signal # P-controller for steering
-            self.robot_vel.linear.x = 0.15 * self.signal  # Constant forward speed
-            self.cmd_vel_pub.publish(self.robot_vel)
+        if self.contour:
+            self.robot_vel.angular.z = (-float(self.error) / 200) * self.signal  # P-controller for steering
+            self.robot_vel.linear.x = 0.15 * self.signal  # Adjusted forward speed
         else:
             self.robot_vel.angular.z = 0
             self.robot_vel.linear.x = 0
         self.cmd_vel_pub.publish(self.robot_vel)
-        
-        
+
 def main(args=None):
     rclpy.init(args=args)
     node = LineFollower()
