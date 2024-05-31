@@ -10,34 +10,17 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 class LineFollower(Node):
     def __init__(self):
-        super().__init__('line_follower_node')
-        self.bridge = CvBridge()
-        qos_profile = QoSProfile(depth=10,reliability = ReliabilityPolicy.BEST_EFFORT)
-        self.sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
-        self.pub = self.create_publisher(Image, 'processed_img', 10)
+        super().__init__('velocity_node')
+        self.sub = self.create_subscription(Image, 'error', self.camera_callback, 10)
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel',qos_profile)
         self.robot_vel = Twist()
-        self.image_received_flag = False
         dt = 0.1
         self.timer = self.create_timer(dt, self.timer_callback)
-        self.get_logger().info('Line Follower Node started')
-
-    def camera_callback(self, msg):
-        try:
-            self.cv_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            self.image_received_flag = True
-        except Exception as e:
-            self.get_logger().info('Failed to get an image: {}'.format(str(e)))
 
     def timer_callback(self):
         if self.image_received_flag:
             image = self.cv_img.copy()
-            #height, width = image.shape[:2]
-            #top_left = (width // 6,height // 2)
-            #bottom_right = (5* width // 6, height)
-            #blank = np.zeros(image.shape[:2], dtype=np.uint8)
-            #mask = cv2.rectangle(blank,top_left,bottom_right,255,thickness=cv2.FILLED)
-            #masked_image= cv2.bitwise_and(image,image,mask=mask)
+
 
             region_of_interest = image[320:360,70:200]
             #blurred = cv2.GaussianBlur(image, (5, 5), 0) # gaussian filter
