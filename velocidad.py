@@ -27,8 +27,6 @@ class LineFollower(Node):
         self.robot_vel.linear.x = 0.15  # Constant forward speed
         self.cmd_vel_pub.publish(self.robot_vel)
         
-
-
 def main(args=None):
     rclpy.init(args=args)
     node = LineFollower()
