@@ -11,60 +11,23 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 class LineFollower(Node):
     def __init__(self):
         super().__init__('velocity_node')
-        self.sub = self.create_subscription(Image, 'error', self.camera_callback, 10)
+        self.sub = self.create_subscription(Int32, 'error', self.camera_callback, 10)
+        qos_profile = QoSProfile(depth=10,reliability = ReliabilityPolicy.BEST_EFFORT)
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel',qos_profile)
         self.robot_vel = Twist()
+        self.error = 0
         dt = 0.1
         self.timer = self.create_timer(dt, self.timer_callback)
 
-    def timer_callback(self):
-        if self.image_received_flag:
-            image = self.cv_img.copy()
-
-
-            region_of_interest = image[320:360,70:200]
-            #blurred = cv2.GaussianBlur(image, (5, 5), 0) # gaussian filter
-            gray = cv2.cvtColor(region_of_interest, cv2.COLOR_BGR2GRAY)
-            _, thresholded = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
-            #cv2.imshow("Seguidor de Linea",thresholded)
-            #if cv2.waitKey(1) & 0xFF == ord('q'):
-                #self.get_logger().info("Exit requested by user.")
-                #rclpy.shutdown()
-            # Adaptative threshold
-            #thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2) 
+    def error_callback(self, msg):
+        self.error = msg.data
+    
+    def timer_callback(self, msg):  
+        self.robot_vel.angular.z = -float(self.error) / 200  # P-controller for steering
+        self.robot_vel.linear.x = 0.15  # Constant forward speed
+        self.cmd_vel_pub.publish(self.robot_vel)
         
-            contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if contours:
-                # Assume the largest contour is the line
-                largest_contour = max(contours, key=cv2.contourArea)
-                M = cv2.moments(largest_contour)
-                if M['m00'] != 0:
-                    cx = int(M['m10']/M['m00'])
-                    cy = int(M['m01']/M['m00'])
-                    # Draw a circle at the center of the line
-                    mark_size = 2  # Puedes ajustar esto según la estética deseada
 
-                    # Dibujar un círculo en el centro de la línea
-                    cv2.circle(region_of_interest, (cx, cy), mark_size, (0, 255, 0), -1)
-
-                    # Calculate error from the center of the image
-                    img_center = region_of_interest.shape[1]//2
-                    error = cx - img_center
-                    print('Centro de imagen:', img_center)
-                    print('Posicion de linea:', cx)
-                    print('Error:', error)
-                    self.robot_vel.angular.z = -float(error) / 200  # P-controller for steering
-                    self.robot_vel.linear.x = 0.15  # Constant forward speed
-                else:
-                    self.robot_vel.angular.z = 0.0
-                    self.robot_vel.linear.x = 0.0
-            else:
-                self.get_logger().info('No line detected')
-                self.robot_vel.angular.z = 0.0
-                self.robot_vel.linear.x = 0.0
-
-            self.cmd_vel_pub.publish(self.robot_vel)
-            self.pub.publish(self.bridge.cv2_to_imgmsg(region_of_interest, 'bgr8'))
 
 def main(args=None):
     rclpy.init(args=args)
