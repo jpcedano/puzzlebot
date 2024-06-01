@@ -22,6 +22,9 @@ class VideoSubscriber(Node):
             self.publish_image(processed_frame)
             self.publish_signal(signal_value)
 
+            cv2.imshow('Video Stream', processed_frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                rclpy.shutdown()
         except CvBridgeError as e:
             self.get_logger().error(f'Failed to convert image: {str(e)}')
 
@@ -34,7 +37,7 @@ class VideoSubscriber(Node):
 
     def publish_signal(self, signal_value):
         msg = Float32()
-        msg.data = signal_value
+        msg.data = float(signal_value)
         self.signal_publisher.publish(msg)
 
     def detect_and_highlight_circles(self, frame):
@@ -42,7 +45,7 @@ class VideoSubscriber(Node):
         blurred = cv2.medianBlur(gray, 11)
 
         color = (0, 0, 0)
-        signal_value = 0
+        signal_value = 0.0
 
         circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=30,
                                    param1=50, param2=30, minRadius=5, maxRadius=30)
@@ -69,11 +72,11 @@ class VideoSubscriber(Node):
 
                 if 0 <= mean_hsv[0] < 30 or 160 <= mean_hsv[0] <= 180:
                     color = (0, 0, 255)
-                    signal_value = 0.0
+                    signal_value = 3.0
                     print("Rojo Detectado")
                 elif 35 <= mean_hsv[0] <= 55:
                     color = (0, 255, 255)
-                    signal_value = 0.5
+                    signal_value = 2.0
                     print("Amarillo Detectado")
                 elif 60 <= mean_hsv[0] <= 85:
                     color = (0, 255, 0)
