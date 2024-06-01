@@ -1,12 +1,9 @@
-# puzzlebot
-
-ros2 run proyecto_final semaforos
-Nothing detected
+puzzlebot@jetson:~/proyecto_final$ ros2 run proyecto_final velocidad 
 Traceback (most recent call last):
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/proyecto_final/semaforos", line 11, in <module>
-    load_entry_point('proyecto-final==0.0.0', 'console_scripts', 'semaforos')()
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 97, in main
-    rclpy.spin(video_subscriber)
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/proyecto_final/velocidad", line 11, in <module>
+    load_entry_point('proyecto-final==0.0.0', 'console_scripts', 'velocidad')()
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/velocidad.py", line 47, in main
+    rclpy.spin(node)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/__init__.py", line 222, in spin
     executor.spin_once()
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 739, in spin_once
@@ -17,15 +14,13 @@ Traceback (most recent call last):
     self._handler.send(None)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 437, in handler
     await call_coroutine(entity, arg)
-  File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 362, in _execute_subscription
-    await await_or_execute(sub.callback, msg)
+  File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 351, in _execute_timer
+    await await_or_execute(tmr.callback)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 107, in await_or_execute
     return callback(*args)
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 23, in listener_callback
-    self.publish_signal(signal_value)
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 37, in publish_signal
-    msg.data = signal_value
-  File "/opt/ros/humble/lib/python3.8/site-packages/std_msgs/msg/_float32.py", line 123, in data
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/velocidad.py", line 40, in timer_callback
+    self.robot_vel.angular.z = 0
+  File "/opt/ros/humble/lib/python3.8/site-packages/geometry_msgs/msg/_vector3.py", line 165, in z
     assert \
-AssertionError: The 'data' field must be of type 'float'
+AssertionError: The 'z' field must be of type 'float'
 [ros2run]: Process exited with failure 1
