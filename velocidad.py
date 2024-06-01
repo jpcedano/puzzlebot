@@ -10,7 +10,7 @@ class LineFollower(Node):
 
         self.error_sub = self.create_subscription(Int32, 'error', self.error_callback, 10)
         self.contour_sub = self.create_subscription(Bool, 'contour', self.contour_callback, 10)
-        self.signal_sub = self.create_subscription(Float32, '/traffic_light_signal', self.signal_callback, 10)
+        #self.signal_sub = self.create_subscription(Float32, '/traffic_light_signal', self.signal_callback, 10)
 
         qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', qos_profile)
@@ -18,7 +18,7 @@ class LineFollower(Node):
         self.robot_vel = Twist()
         self.error = 0
         self.contour = False
-        self.signal = 1.0
+        #self.signal = 1.0
 
         dt = 0.1
         self.timer = self.create_timer(dt, self.timer_callback)
@@ -29,13 +29,13 @@ class LineFollower(Node):
     def contour_callback(self, msg):
         self.contour = msg.data
 
-    def signal_callback(self, msg):
-        self.signal = msg.data
+    #def signal_callback(self, msg):
+        #self.signal = msg.data
 
     def timer_callback(self):  
         if self.contour:
-            self.robot_vel.angular.z = (-float(self.error) / 200) * self.signal  # P-controller for steering
-            self.robot_vel.linear.x = 0.15 * self.signal  # Adjusted forward speed
+            self.robot_vel.angular.z = (-float(self.error) / 200)  # P-controller for steering
+            self.robot_vel.linear.x = 0.15  # Adjusted forward speed
         else:
             self.robot_vel.angular.z = 0
             self.robot_vel.linear.x = 0
