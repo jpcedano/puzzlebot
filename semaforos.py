@@ -4,28 +4,26 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float32
 import cv2
 import numpy as np
+from cv_bridge import CvBridge, CvBridgeError
 
-class WebcamPublisher(Node):
+class VideoSubscriber(Node):
     def __init__(self):
-        super().__init__('webcam_publisher')
+        super().__init__('video_subscriber')
+        self.subscription = self.create_subscription(Image, 'video_source/raw', self.listener_callback, 10)
         self.publisher = self.create_publisher(Image, '/webcam_image', 10)
         self.signal_publisher = self.create_publisher(Float32, '/traffic_light_signal', 10)
-        self.capture = cv2.VideoCapture(0)
+        self.bridge = CvBridge()
+        self.frame = None
 
-    def publish_webcam_image(self):
-        while True:
-            ret, frame = self.capture.read()
-            if not ret:
-                self.get_logger().error('Failed to capture frame from webcam')
-                break
-
-            processed_frame, signal_value = self.detect_and_highlight_circles(frame)
+    def listener_callback(self, msg):
+        try:
+            self.frame = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+            processed_frame, signal_value = self.detect_and_highlight_circles(self.frame)
             self.publish_image(processed_frame)
             self.publish_signal(signal_value)
 
-            cv2.imshow('Webcam', processed_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+        except CvBridgeError as e:
+            self.get_logger().error(f'Failed to convert image: {str(e)}')
 
     def publish_image(self, frame):
         msg = Image()
@@ -95,9 +93,9 @@ class WebcamPublisher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    webcam_publisher = WebcamPublisher()
-    webcam_publisher.publish_webcam_image()
-    webcam_publisher.destroy_node()
+    video_subscriber = VideoSubscriber()
+    rclpy.spin(video_subscriber)
+    video_subscriber.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
