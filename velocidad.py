@@ -36,12 +36,36 @@ class LineFollower(Node):
         self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
+    def rotate(self):
+        duration = 0.4
+        self.robot_vel.angular.z = 0.1
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            self.cmd_vel_pub.publish(self.robot_vel)
+        
+        self.robot_vel.angular.z = 0.0
+        self.cmd_vel_pub.publish(self.robot_vel)
+
+    def forward(self):
+        duration_forward = 0.5
+        self.robot_vel.linear.x = 0.1
+        start_time = time.time()
+
+        while time.time() - start_time < duration_forward:
+            self.cmd_vel_pub.publish(self.robot_vel)
+            
+        self.robot_vel.linear.x = 0.0
+        self.cmd_vel_pub.publish(self.robot_vel)
+
 
 
     def timer_callback(self):  
         rot_tiempo = 0.1
         duration = 2.0
+        # contador = 0 
 
+        print(self.objeto_detectado)
         if self.contour:
             if (self.objeto_detectado == 'workers_sgl'):
                 print("workers")
@@ -50,32 +74,21 @@ class LineFollower(Node):
             else:
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.15  # Adjusted forward speed
+
+        elif(self.contour == False and self.objeto_detectado == 'turnleft_sgl'):
+            
+            print("turn left signal")
+            self.robot_vel.angular.z = 0.0
+            self.robot_vel.linear.x = 0.0
+            self.forward()
+            time.sleep(2.0)
+            self.rotate()
+            time.sleep(2.0)
+            self.forward()
         else:
             print("no line")
             self.robot_vel.angular.z = 0.0
             self.robot_vel.linear.x = 0.0
-            if (self.objeto_detectado == 'turnleft_sgl'):
-                for i in range(400):
-                    self.robot_vel.linear.x = 0.1
-                    self.robot_vel.angular.z = 0.0
-                start_time = time.time()
-                self.robot_vel.angular.z = 0.0
-                self.robot_vel.linear.x = 0.0
-                time.sleep(2.0)
-
-                while time.time() - start_time < rot_tiempo:
-                    self.robot_vel.angular.z = 0.1
-                    # self.cmd_vel_pub(self.robot_vel)
-                self.robot_vel.angular.z =  0.0 
-
-            elif (self.objeto_detectado == 'stop_sgl' and self.contour == False):
-                time.sleep(3.0)
-                start_time = time.time()
-                while time.time() - start_time < duration:
-                    self.robot_vel.linear.x = 0.1
-                    # self.cmd_vel_pub.publish(self.robot_vel)
-                self.robot_vel.angular.z= 0.0
-                self.robot_vel.linear.x = 0.0
 
         print(self.objeto_detectado)
         self.cmd_vel_pub.publish(self.robot_vel)
