@@ -70,28 +70,34 @@ class LineFollower(Node):
             if (self.objeto_detectado == 'workers_sgl'):
                 print("workers")
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
-                self.robot_vel.linear.x = 0.05  # Adjusted forward speed            
+                self.robot_vel.linear.x = 0.05  # Adjusted forward speed   
+                self.cmd_vel_pub.publish(self.robot_vel)         
             else:
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.15  # Adjusted forward speed
+                self.cmd_vel_pub.publish(self.robot_vel)
 
         elif(self.contour == False and self.objeto_detectado == 'turnleft_sgl'):
             
             print("turn left signal")
-            self.robot_vel.angular.z = 0.0
-            self.robot_vel.linear.x = 0.0
-            self.forward()
-            time.sleep(2.0)
-            self.rotate()
-            time.sleep(2.0)
-            self.forward()
+            for i in range(500):
+                self.robot_vel.angular.z = 0.0
+                self.robot_vel.linear.x = 0.1
+                self.cmd_vel_pub.publish(self.robot_vel)
+
+            for j in range(500):
+                self.robot_vel.angular.z = 0.05
+                self.robot_vel.linear.x = 0.0
+                self.cmd_vel_pub.publish(self.robot_vel)
+
         else:
             print("no line")
             self.robot_vel.angular.z = 0.0
             self.robot_vel.linear.x = 0.0
+            self.cmd_vel_pub.publish(self.robot_vel)
 
         print(self.objeto_detectado)
-        self.cmd_vel_pub.publish(self.robot_vel)
+
 
 def main(args=None):
     rclpy.init(args=args)
