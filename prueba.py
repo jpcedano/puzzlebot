@@ -1,8 +1,10 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32, Bool, String
+from std_msgs.msg import Int32, Bool, Float32, String
 from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+import time
+
 
 class LineFollower(Node):
     def __init__(self):
@@ -20,11 +22,7 @@ class LineFollower(Node):
         self.objetos = ""
         self.objeto_detectado = ""
 
-        self.declare_parameter('linear_speed', 0.1)
-        self.declare_parameter('angular_speed', 0.1)
-        self.declare_parameter('rotate_duration', 0.4)
-        self.declare_parameter('forward_duration', 0.5)
-        self.declare_parameter('sleep_time', 2.0)
+        self.turnleft_signal_detected = False  # Flag for turn left signal detection
 
         dt = 0.1
         self.timer = self.create_timer(dt, self.timer_callback)
@@ -36,58 +34,72 @@ class LineFollower(Node):
         self.contour = msg.data
 
     def objetos_callback(self, msg):
-        self.objetos = msg.data.split(", ")
+        self.objetos = msg.data
+        self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
     def rotate(self):
-        rotate_duration = self.get_parameter('rotate_duration').value
-        angular_speed = self.get_parameter('angular_speed').value
+        duration = 0.4
+        self.robot_vel.angular.z = 0.1
+        start_time = time.time()
 
-        self.robot_vel.angular.z = angular_speed
-        self.cmd_vel_pub.publish(self.robot_vel)
-        self.create_timer(rotate_duration, self.stop_rotate)
-
-    def stop_rotate(self):
+        while time.time() - start_time < duration:
+            self.cmd_vel_pub.publish(self.robot_vel)
+        
         self.robot_vel.angular.z = 0.0
         self.cmd_vel_pub.publish(self.robot_vel)
 
     def forward(self):
-        forward_duration = self.get_parameter('forward_duration').value
-        linear_speed = self.get_parameter('linear_speed').value
+        duration_forward = 0.5
+        self.robot_vel.linear.x = 0.1
+        start_time = time.time()
 
-        self.robot_vel.linear.x = linear_speed
-        self.cmd_vel_pub.publish(self.robot_vel)
-        self.create_timer(forward_duration, self.stop_forward)
-
-    def stop_forward(self):
+        while time.time() - start_time < duration_forward:
+            self.cmd_vel_pub.publish(self.robot_vel)
+            
         self.robot_vel.linear.x = 0.0
         self.cmd_vel_pub.publish(self.robot_vel)
 
-    def timer_callback(self):
-        self.get_logger().info(f'Detected Object: {self.objeto_detectado}')
-        sleep_time = self.get_parameter('sleep_time').value
+    def timer_callback(self):  
+        rot_tiempo = 0.1
+        duration = 2.0
 
+        print(self.objeto_detectado)
         if self.contour:
-            if self.objeto_detectado == 'workers_sgl':
-                self.get_logger().info('Workers signal detected')
-                self.robot_vel.angular.z = (-float(self.error) / 400)
-                self.robot_vel.linear.x = 0.05
+            if (self.objeto_detectado == 'workers_sgl'):
+                print("workers")
+                self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
+                self.robot_vel.linear.x = 0.05  # Adjusted forward speed   
+                self.cmd_vel_pub.publish(self.robot_vel)         
             else:
-                self.robot_vel.angular.z = (-float(self.error) / 400)
-                self.robot_vel.linear.x = 0.15
-        elif not self.contour and self.objeto_detectado == 'turnleft_sgl':
-            self.get_logger().info('Turn left signal detected')
-            self.robot_vel.angular.z = 0.0
-            self.robot_vel.linear.x = 0.0
-            self.forward()
-            self.create_timer(sleep_time, self.rotate)
-            self.create_timer(sleep_time * 2, self.forward)
-        else:
-            self.get_logger().info('No line detected')
-            self.robot_vel.angular.z = 0.0
-            self.robot_vel.linear.x = 0.0
+                self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
+                self.robot_vel.linear.x = 0.15  # Adjusted forward speed
+                self.cmd_vel_pub.publish(self.robot_vel)
 
-        self.cmd_vel_pub.publish(self.robot_vel)
+        elif self.contour == False and self.objeto_detectado == 'turnleft_sgl':
+            if not self.turnleft_signal_detected:
+                self.turnleft_signal_detected = True  # Set flag to True
+
+                print("turn left signal")
+                for i in range(500):
+                    self.robot_vel.angular.z = 0.0
+                    self.robot_vel.linear.x = 0.1
+                    self.cmd_vel_pub.publish(self.robot_vel)
+
+                for j in range(500):
+                    self.robot_vel.angular.z = 0.05
+                    self.robot_vel.linear.x = 0.0
+                    self.cmd_vel_pub.publish(self.robot_vel)
+
+        else:
+            self.turnleft_signal_detected = False  # Reset flag
+            print("no line")
+            self.robot_vel.angular.z = 0.0
+            self.robot_vel.linear.x = 0.0
+            self.cmd_vel_pub.publish(self.robot_vel)
+
+        print(self.objeto_detectado)
+
 
 def main(args=None):
     rclpy.init(args=args)
