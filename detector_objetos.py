@@ -26,6 +26,13 @@ class YoloV8Node(Node):
         # Perform inference on the frame
         results = self.model(frame)
 
+        # Check if results are empty
+        if not results:
+            self.get_logger().info('No detection results.')
+            return
+        
+        self.get_logger().info('Inference completed.')
+
         # Annotate the frame with detection results
         annotated_frame = results[0].plot()
 
@@ -34,11 +41,22 @@ class YoloV8Node(Node):
 
         # Publish the annotated frame
         self.publisher_image.publish(img_msg)
+        self.get_logger().info('Annotated frame published.')
 
         # Extract and publish labels
-        labels = [self.model.names[int(cls)] for cls in results[0].boxes.cls]
-        labels_str = ', '.join(labels)
-        self.publisher_label.publish(String(data=labels_str))
+        if hasattr(results[0], 'boxes') and hasattr(results[0].boxes, 'cls'):
+            labels = []
+            for cls in results[0].boxes.cls:
+                label_index = int(cls)
+                if label_index in self.model.names:
+                    labels.append(self.model.names[label_index])
+                else:
+                    self.get_logger().warn(f'Label index {label_index} not found in model names.')
+            labels_str = ', '.join(labels)
+            self.get_logger().info(f'Detected labels: {labels_str}')
+            self.publisher_label.publish(String(data=labels_str))
+        else:
+            self.get_logger().info('No labels to publish.')
 
 def main(args=None):
     rclpy.init(args=args)
@@ -52,4 +70,4 @@ def main(args=None):
         rclpy.shutdown()
 
 if __name__ == '__main__':
-    main() 
+    main()
