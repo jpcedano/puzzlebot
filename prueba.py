@@ -51,28 +51,6 @@ class LineFollower(Node):
         self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
-    def rotate(self):
-        duration = 0.4
-        self.robot_vel.angular.z = 0.1
-        start_time = time.time()
-
-        while time.time() - start_time < duration:
-            self.cmd_vel_pub.publish(self.robot_vel)
-        
-        self.robot_vel.angular.z = 0.0
-        self.cmd_vel_pub.publish(self.robot_vel)
-
-    def forward(self):
-        duration_forward = 0.5
-        self.robot_vel.linear.x = 0.1
-        start_time = time.time()
-
-        while time.time() - start_time < duration_forward:
-            self.cmd_vel_pub.publish(self.robot_vel)
-            
-        self.robot_vel.linear.x = 0.0
-        self.cmd_vel_pub.publish(self.robot_vel)
-
     def wl_callback(self,msg):
         self.wl = msg.data
 
@@ -83,7 +61,6 @@ class LineFollower(Node):
 
         wl = self.wl
         wr = self.wr
-        angulo = self.angulo
         radio_llanta = 0.05
         distancia_llantas = 0.19
         diferencial_tiempo = 0.01
@@ -108,32 +85,38 @@ class LineFollower(Node):
                 self.cmd_vel_pub.publish(self.robot_vel)
 
         elif self.objeto_detectado:
-            angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
-            self.angulo += angulo_actual
-            print("Angulo: ",angulo)
             if self.contour == False and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
 
                     #print("turn left signal")
 
-                    for i in range(500):
+                    for i in range(300):
+                        print("Fixing Angle Issue")
                         self.robot_vel.angular.z = -0.01
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
 
                     for j in range(500):
+                        print("Going forward in intersection")
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
 
                     while self.angulo <= 90.0:
+                        print("Turning in Intersection")
                         self.robot_vel.angular.z = 0.05
                         self.robot_vel.linear.x = 0.0
+                        angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
+                        self.angulo += angulo_actual
+                        print("Angulo: ",self.angulo)
                         self.cmd_vel_pub.publish(self.robot_vel)
+                        
                 
                     if (self.objeto_detectado != 'turnleft_sgl'):
                         self.turnleft_signal_detected = False
+                        self.angulo = 0.0
+
             
 
             elif self.contour == False and self.objeto_detectado == 'round_sgl':
@@ -208,7 +191,6 @@ class LineFollower(Node):
             #print("no line")
             self.robot_vel.angular.z = 0.0
             self.robot_vel.linear.x = 0.0
-            angulo_actual = 0.0
             self.cmd_vel_pub.publish(self.robot_vel)
 
         print(self.objeto_detectado)
