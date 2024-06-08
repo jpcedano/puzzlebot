@@ -10,6 +10,9 @@ class TrafficLightDetector(Node):
     def __init__(self):
         super().__init__('TrafficLightDetector_node')
 
+        # Cambiar el nombre del tópico de suscripción a "/videosource/raw"
+        self.image_sub = self.create_subscription(Image, '/videosource/raw', self.camera_callback, 10)
+
         self.image_pub = self.create_publisher(Image, '/traffic_light_image', 10)
         self.signal_pub = self.create_publisher(Float32, '/traffic_light_signal', 10)
 
