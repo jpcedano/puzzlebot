@@ -28,7 +28,7 @@ class TrafficLight(Node):
             self.image_received_flag = True
 
         except Exception as e:
-            self.get_logger().info('Failed to get an image: {}'.format(str(e)))
+            self.get_logger().info(f'Failed to get an image: {str(e)}')
 
     def timer_callback(self):
         if self.image_received_flag:
@@ -46,7 +46,7 @@ class TrafficLight(Node):
             if circles is not None and len(circles[0]) > 0:
                 for circle in circles[0]:
                     x, y, r = circle
-                    x1, y1, x2 = int(x - r), int(y - r), int(x + r), int(y + r)
+                    x1, y1, x2, y2 = int(x - r), int(y - r), int(x + r), int(y + r)
                     circle_area = resized_image[y1:y2, x1:x2]
 
                     hsv_circle = cv2.cvtColor(circle_area, cv2.COLOR_BGR2HSV)
