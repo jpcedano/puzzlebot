@@ -5,7 +5,6 @@ from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 import time
 
-
 class LineFollower(Node):
     def __init__(self):
         super().__init__('velocity_node')
@@ -18,8 +17,8 @@ class LineFollower(Node):
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', qos_profile)
 
         qos_profile_enc = rclpy.qos.qos_profile_sensor_data
-        self.wl_subscripton = self.create_subscription(Float32, 'VelocityEncL',self.wl_callback, qos_profile_enc)
-        self.rl_subscripton = self.create_subscription(Float32, 'VelocityEncR',self.wr_callback, qos_profile_enc)
+        self.wl_subscripton = self.create_subscription(Float32, 'VelocityEncL', self.wl_callback, qos_profile_enc)
+        self.rl_subscripton = self.create_subscription(Float32, 'VelocityEncR', self.wr_callback, qos_profile_enc)
 
         self.wl = 0.0
         self.wr = 0.0
@@ -51,14 +50,13 @@ class LineFollower(Node):
         self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
-    def wl_callback(self,msg):
+    def wl_callback(self, msg):
         self.wl = msg.data
 
-    def wr_callback(self,msg):
+    def wr_callback(self, msg):
         self.wr = msg.data   
 
     def timer_callback(self): 
-
         wl = self.wl
         wr = self.wr
         radio_llanta = 0.05
@@ -66,16 +64,9 @@ class LineFollower(Node):
         diferencial_tiempo = 0.01
         angulo_actual = self.angulo_actual
 
-        
-        #print("Round Flag: ",self.round_signal_detected)
-        #print("Stop Flag: ",self.stop_signal_detected) 
-        #print("Turn Left: ", self.turnleft_signal_detected)
-        #print("Straight Flag: ",self.straight_signal_detected)
-
         print(self.objeto_detectado)
         if self.contour:
-            if (self.objeto_detectado == 'workers_sgl'):
-                #print("workers")
+            if self.objeto_detectado == 'workers_sgl':
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.05 # Adjusted forward speed   
                 self.cmd_vel_pub.publish(self.robot_vel)         
@@ -85,11 +76,9 @@ class LineFollower(Node):
                 self.cmd_vel_pub.publish(self.robot_vel)
 
         elif self.objeto_detectado:
-            if self.contour == False and self.objeto_detectado == 'turnleft_sgl':
+            if not self.contour and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
-
-                    #print("turn left signal")
 
                     for i in range(300):
                         print("Fixing Angle Issue")
@@ -107,22 +96,19 @@ class LineFollower(Node):
                         print("Turning in Intersection")
                         self.robot_vel.angular.z = 0.05
                         self.robot_vel.linear.x = 0.0
-                        angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
+                        angulo_actual = radio_llanta * ((wl - wr) / distancia_llantas) * diferencial_tiempo
                         self.angulo += angulo_actual
-                        print("Angulo: ",self.angulo)
+                        print("Angulo: ", self.angulo)
                         self.cmd_vel_pub.publish(self.robot_vel)
                         
-                
-                    if (self.objeto_detectado != 'turnleft_sgl'):
+                    if self.objeto_detectado != 'turnleft_sgl':
                         self.turnleft_signal_detected = False
                         self.angulo = 0.0
 
-            
-
-            elif self.contour == False and self.objeto_detectado == 'round_sgl':
+            elif not self.contour and self.objeto_detectado == 'round_sgl':
                 if not self.round_signal_detected:
                     self.round_signal_detected = True  # Set flag to True
-                    #print("roundabout signal")
+
                     for i in range(500):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
@@ -133,14 +119,12 @@ class LineFollower(Node):
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
                 
-                    if (self.objeto_detectado != 'round_sgl'):
+                    if self.objeto_detectado != 'round_sgl':
                         self.round_signal_detected = False
 
-            elif (self.contour == False and self.objeto_detectado == 'straight_sgl'):
+            elif not self.contour and self.objeto_detectado == 'straight_sgl':
                 if not self.straight_signal_detected:
                     self.straight_signal_detected = True
-
-                    #print("Straight Signal")
 
                     for i in range(300):
                         self.robot_vel.angular.z = -0.05
@@ -157,14 +141,13 @@ class LineFollower(Node):
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    if (self.objeto_detectado != 'straight_sgl'):
+                    if self.objeto_detectado != 'straight_sgl':
                         self.straight_signal_detected = False
 
-            elif (self.contour == False and self.objeto_detectado == 'stop_sgl'):
+            elif not self.contour and self.objeto_detectado == 'stop_sgl':
                 if not self.stop_signal_detected:
                     self.stop_signal_detected = True
 
-                    #print("Stop Signal Detected")
                     for i in range(1000):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.0
@@ -180,7 +163,7 @@ class LineFollower(Node):
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel) 
 
-                    if(self.objeto_detectado != 'stop_sgl'):
+                    if self.objeto_detectado != 'stop_sgl':
                         self.stop_signal_detected = False   
 
         else:
@@ -188,13 +171,11 @@ class LineFollower(Node):
             self.round_signal_detected = False
             self.straight_signal_detected = False
             self.stop_signal_detected = False
-            #print("no line")
             self.robot_vel.angular.z = 0.0
             self.robot_vel.linear.x = 0.0
             self.cmd_vel_pub.publish(self.robot_vel)
 
         print(self.objeto_detectado)
-
 
 def main(args=None):
     rclpy.init(args=args)
