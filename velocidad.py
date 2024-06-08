@@ -5,7 +5,6 @@ from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 import time
 
-
 class LineFollower(Node):
     def __init__(self):
         super().__init__('velocity_node')
@@ -27,7 +26,6 @@ class LineFollower(Node):
         self.objeto_detectado = ""
         signal_value = Float32()
 
-
         self.turnleft_signal_detected = False  # Flag for turn left signal detection
         self.round_signal_detected = False
         self.straight_signal_detected = False
@@ -47,11 +45,10 @@ class LineFollower(Node):
         self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
-    def semaforo_callback(self,msg):
+    def semaforo_callback(self, msg):
         self.semaforo = msg.data
-        self.semaforo = self.objetos.split(", ")
-        self.semaforo_detectado = self.semaforo[0]
-
+        self.semaforo_detectado = self.semaforo
+        print("Semaforo callback - color:", self.semaforo_detectado)
 
     def timer_callback(self):
 
@@ -65,114 +62,101 @@ class LineFollower(Node):
             pass
 
         if self.contour:
-            if (self.objeto_detectado == 'workers_sgl'):
-                #print("workers")
+            if self.objeto_detectado == 'workers_sgl':
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.05 # Adjusted forward speed   
                 self.cmd_vel_pub.publish(self.robot_vel)   
                                 
             else:
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
-                self.robot_vel.linear.x = 0.15*signal_value  # Adjusted forward speed
+                self.robot_vel.linear.x = 0.15 * signal_value  # Adjusted forward speed
                 self.cmd_vel_pub.publish(self.robot_vel)
 
                 print("color: ", self.semaforo_detectado)
                 print("valor: ", signal_value)
 
         elif self.objeto_detectado:
-            #print("Angulo: ", angulo_actual)
-            if self.contour == False and self.objeto_detectado == 'turnleft_sgl':
+            if not self.contour and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
 
-                    #print("turn left signal")
-
-                    for i in range(300):
-                        #print("Fixing Angle Issue")
+                    for _ in range(300):
                         self.robot_vel.angular.z = -0.01
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for j in range(500):
-                        #print("Going forward in intersection")
+                    for _ in range(500):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
                     
-                    for j in range(1350):
-                        #print("Turn Left")
+                    for _ in range(1350):
                         self.robot_vel.angular.z = 0.05
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)                    
 
                 
-                    if (self.objeto_detectado != 'turnleft_sgl'):
+                    if self.objeto_detectado != 'turnleft_sgl':
                         self.turnleft_signal_detected = False
 
-            
-
-            elif self.contour == False and self.objeto_detectado == 'round_sgl':
+            elif not self.contour and self.objeto_detectado == 'round_sgl':
                 if not self.round_signal_detected:
                     self.round_signal_detected = True  # Set flag to True
-                    #print("roundabout signal")
-                    for i in range(500):
+                    for _ in range(500):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for j in range(1500):
+                    for _ in range(1500):
                         self.robot_vel.angular.z = -0.05
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
                 
-                    if (self.objeto_detectado != 'round_sgl'):
+                    if self.objeto_detectado != 'round_sgl':
                         self.round_signal_detected = False
 
-            elif (self.contour == False and self.objeto_detectado == 'straight_sgl'):
+            elif not self.contour and self.objeto_detectado == 'straight_sgl':
                 if not self.straight_signal_detected:
                     self.straight_signal_detected = True
 
-                    #print("Straight Signal")
-
-                    for i in range(300):
+                    for _ in range(300):
                         self.robot_vel.angular.z = -0.05
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for i in range(500):
+                    for _ in range(500):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for i in range(500):
+                    for _ in range(500):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    if (self.objeto_detectado != 'straight_sgl'):
+                    if self.objeto_detectado != 'straight_sgl':
                         self.straight_signal_detected = False
 
-            elif (self.contour == False and self.objeto_detectado == 'stop_sgl'):
+            elif not self.contour and self.objeto_detectado == 'stop_sgl':
                 if not self.stop_signal_detected:
                     self.stop_signal_detected = True
 
-                    #print("Stop Signal Detected")
-                    for i in range(1000):
+                    for _ in range(1000):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for i in range(200):
+                    for _ in range(200):
                         self.robot_vel.angular.z = -0.05
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)                
 
-                    for i in range(1000):
+                    for _ in range(1000):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel) 
 
-                    if(self.objeto_detectado != 'stop_sgl'):
+                    if self.objeto_detectado != 'stop_sgl':
                         self.stop_signal_detected = False   
 
         else:
@@ -180,7 +164,6 @@ class LineFollower(Node):
             self.round_signal_detected = False
             self.straight_signal_detected = False
             self.stop_signal_detected = False
-            #print("no line")
             self.robot_vel.angular.z = 0.0
             self.robot_vel.linear.x = 0.0
             self.cmd_vel_pub.publish(self.robot_vel)
