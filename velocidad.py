@@ -25,6 +25,8 @@ class LineFollower(Node):
         self.contour = False
         self.objetos = ""
         self.objeto_detectado = ""
+        signal_value = Float32()
+
 
         self.turnleft_signal_detected = False  # Flag for turn left signal detection
         self.round_signal_detected = False
@@ -47,16 +49,20 @@ class LineFollower(Node):
 
     def semaforo_callback(self,msg):
         self.semaforo = msg.data
+        self.semaforo = self.objetos.split(", ")
+        self.semaforo_detectado = self.semaforo[0]
 
 
     def timer_callback(self):
 
-        if self.semaforo == "green_light":
-            signal_value = 1.0
-        elif self.semaforo == "yellow_light":
-            signal_value = 0.5
-        elif self.semaforo == "red_light":
+        signal_value = 1.0
+        
+        if self.semaforo_detectado == "red_light":
             signal_value = 0.0
+        elif self.semaforo_detectado == "yellow_light":
+            signal_value = 0.5
+        else:
+            pass
 
         if self.contour:
             if (self.objeto_detectado == 'workers_sgl'):
@@ -69,6 +75,9 @@ class LineFollower(Node):
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.15*signal_value  # Adjusted forward speed
                 self.cmd_vel_pub.publish(self.robot_vel)
+
+                print("color: ", self.semaforo_detectado)
+                print("valor: ", signal_value)
 
         elif self.objeto_detectado:
             #print("Angulo: ", angulo_actual)
