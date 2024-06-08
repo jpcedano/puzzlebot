@@ -7,8 +7,8 @@ import numpy as np
 from cv_bridge import CvBridge
 
 class TrafficLight(Node):
-    def _init_(self):
-        super()._init_('TrafficLight_node')
+    def __init__(self):
+        super().__init__('TrafficLight_node')
 
         self.image_sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
         self.traffic_light_pub = self.create_publisher(Image, '/traffic_light_image', 10)
@@ -95,5 +95,6 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     main()
+
