@@ -1,106 +1,80 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32
-import cv2
 from cv_bridge import CvBridge
+import cv2
 import numpy as np
+from std_msgs.msg import Float32
 
-class TrafficLightDetector(Node):
-    def _init_(self):
-        super()._init_('traffic_light_detector')
-        
+# Variables globales para valores HSV seleccionados
+lower_color = np.array([110, 50, 50])
+upper_color = np.array([130, 255, 255])
+
+class ObjectDetection(Node):
+    def __init__(self):
+        super().__init__('object_detection')
         self.bridge = CvBridge()
+        self.image_sub = self.create_subscription(Image, '/video_source/raw', self.image_callback, 10)
+        self.image_pub = self.create_publisher(Image, '/object_detection/image', 10)
+        self.distance_pub = self.create_publisher(Float32, '/object_detection/distance', 10)
+        self.face_cascade = cv2.CascadeClassifier('C:/Users/rodri/anaconda3/pkgs/libopencv-4.9.0-qt6_py312hd35d245_612/Library/etc/haarcascades/haarcascade_frontalface_default.xml')
+
+    def detect_color(self, frame):
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lower_color, upper_color)
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        mask = np.uint8(mask)
+        res = cv2.bitwise_and(frame, frame, mask=mask[:,:,0])
+        return res
+
+    def calculate_distance(self, apparent_size, real_size_width, real_size_height, focal_length_width, focal_length_height):
+        distance_width = (real_size_width * focal_length_width) / apparent_size[0]
+        distance_height = (real_size_height * focal_length_height) / apparent_size[1]
+        distance = (distance_width + distance_height) / 2
+        return distance
+
+    def image_callback(self, msg):
+        frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        color_detected = self.detect_color(frame)
+        image_msg = self.bridge.cv2_to_imgmsg(color_detected, "bgr8")
+        self.image_pub.publish(image_msg)
         
-        self.image_sub = self.create_subscription(
-            Image, 
-            'video_source/raw', 
-            self.camera_callback, 
-            10
-        )
-        self.traffic_light_pub = self.create_publisher(
-            Image, 
-            '/traffic_light_image', 
-            10
-        )
-        self.signal_pub = self.create_publisher(
-            Float32, 
-            '/traffic_light_signal', 
-            10
-        )
-
-        # Define color ranges in HSV
-        self.red_range = (np.array([0, 70, 50]), np.array([10, 255, 255]))
-        self.yellow_range = (np.array([20, 100, 100]), np.array([30, 255, 255]))
-        self.green_range = (np.array([40, 50, 50]), np.array([90, 255, 255]))
-
-    def camera_callback(self, msg):
-        # Convert ROS Image message to OpenCV image
-        frame = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+        # Segunda parte: Deteción de credenciales y caras
+        # Detectar objetos del color seleccionado
+        gray_frame = cv2.cvtColor(color_detected, cv2.COLOR_BGR2GRAY)
+        contours, _ = cv2.findContours(gray_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        filtered_contours = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 1000:
+                filtered_contours.append(contour)
+        for contour in filtered_contours:
+            x,y,w,h = cv2.boundingRect(contour)
+            apparent_size = (w, h)
+            distance = self.calculate_distance(apparent_size, real_object_width, real_object_height, focal_length_width, focal_length_height)
+            distance_msg = Float32()
+            distance_msg.data = distance
+            self.distance_pub.publish(distance_msg)
+            # Detectar caras dentro del rectángulo
+            roi_frame = frame[y:y+h, x:x+w]
+            gray_roi = cv2.cvtColor(roi_frame, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray_roi, 1.3, 5)
+            for (fx, fy, fw, fh) in faces:
+                cv2.rectangle(roi_frame, (fx, fy), (fx+fw, fy+fh), (0, 255, 0), 2)
+                # Verificar si se detecta una cara dentro del rectángulo
+                if len(faces) > 0:
+                    # Mostrar texto "Estudiante TEC"
+                    cv2.putText(frame, "Estudiante TEC", (x, y - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
-        # Detect and highlight circles
-        frame, signal = self.detect_and_highlight_circles(frame)
-        
-        # Convert OpenCV image back to ROS Image message
-        out_img_msg = self.bridge.cv2_to_imgmsg(frame, 'bgr8')
-        self.traffic_light_pub.publish(out_img_msg)
-        
-        # Publish signal
-        self.signal_pub.publish(Float32(data=signal))
-
-    def detect_and_highlight_circles(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.medianBlur(gray, 5)
-        circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=30,
-                                   param1=50, param2=30, minRadius=5, maxRadius=30)
-
-        signal = 0.0  # Default signal value
-
-        if circles is not None:
-            circles = np.uint16(np.around(circles))
-            for circle in circles[0, :]:
-                x, y, r = circle
-                circle_area = frame[y - r:y + r, x - r:x + r]
-                hsv_circle = cv2.cvtColor(circle_area, cv2.COLOR_BGR2HSV)
-                mean_hsv = np.mean(hsv_circle, axis=(0, 1))
-
-                if self.is_color(mean_hsv, self.red_range):
-                    color = (0, 0, 255)  # Red
-                    color_name = "Red"
-                    signal = 1.0
-                elif self.is_color(mean_hsv, self.yellow_range):
-                    color = (0, 255, 255)  # Yellow
-                    color_name = "Yellow"
-                    signal = 2.0
-                elif self.is_color(mean_hsv, self.green_range):
-                    color = (0, 255, 0)  # Green
-                    color_name = "Green"
-                    signal = 3.0
-                else:
-                    color = (255, 255, 255)  # White for other colors
-                    color_name = "Unknown"
-
-                cv2.circle(frame, (x, y), r, color, 2)
-                cv2.rectangle(frame, (x - r, y - r), (x + r, y + r), color, 2)
-
-                if color_name in ["Red", "Yellow", "Green"]:
-                    cv2.putText(frame, f"Traffic Light: {color_name}", (x - r, y - r - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-        return frame, signal
-
-    def is_color(self, hsv_value, color_range):
-        return color_range[0][0] <= hsv_value[0] <= color_range[1][0] and \
-               color_range[0][1] <= hsv_value[1] <= color_range[1][1] and \
-               color_range[0][2] <= hsv_value[2] <= color_range[1][2]
-
+        cv2.imshow('Object Detection', frame)
+        cv2.waitKey(1)
 
 def main(args=None):
     rclpy.init(args=args)
-    node = TrafficLightDetector()
-    rclpy.spin(node)
-    node.destroy_node()
+    object_detection = ObjectDetection()
+    rclpy.spin(object_detection)
+    object_detection.destroy_node()
     rclpy.shutdown()
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     main()
