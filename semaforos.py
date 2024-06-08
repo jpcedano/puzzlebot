@@ -10,8 +10,13 @@ class TrafficLight(Node):
     def __init__(self):
         super().__init__('TrafficLight_node')
 
+        # Suscribirse al tema de video fuente
         self.image_sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
+        
+        # Publicar la imagen procesada
         self.traffic_light_pub = self.create_publisher(Image, '/traffic_light_image', 10)
+        
+        # Publicar la señal del semáforo
         self.signal_pub = self.create_publisher(Float32, '/traffic_light_signal', 10)
 
         self.traffic_light_signal = Float32()
@@ -26,56 +31,63 @@ class TrafficLight(Node):
         try:
             self.cv_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
             self.image_received_flag = True
-
         except Exception as e:
             self.get_logger().info('Failed to get an image: {}'.format(str(e)))
 
     def timer_callback(self):
         if self.image_received_flag:
             image = self.cv_img.copy()
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            blurred = cv2.medianBlur(gray, 11)
+            resized_image = cv2.resize(image, (360, 270))
+            hsv = cv2.cvtColor(resized_image, cv2.COLOR_BGR2HSV)
 
-            color = (0, 0, 0)
-            signal_value = Float32()
+            # Definir los rangos de color para amarillo, rojo y verde
+            lower_yellow = np.array([20, 100, 100])
+            upper_yellow = np.array([40, 255, 255])
 
-            circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=30, param1=50, param2=30, minRadius=5, maxRadius=30)
+            lower_red1 = np.array([0, 100, 100])
+            upper_red1 = np.array([10, 255, 255])
+            lower_red2 = np.array([160, 100, 100])
+            upper_red2 = np.array([179, 255, 255])
 
-            if circles is not None and len(circles[0]) > 0:
-                for circle in circles[0]:
-                    x, y, r = circle
-                    x1, y1, x2 = int(x - r), int(y - r), int(x + r), int(y + r)
-                    circle_area = image[y1:y2, x1:x2]
+            lower_green = np.array([40, 100, 100])
+            upper_green = np.array([80, 255, 255])
 
-                    hsv_circle = cv2.cvtColor(circle_area, cv2.COLOR_BGR2HSV)
-                    mean_hsv = np.mean(hsv_circle, axis=(0, 1))
+            # Crear máscaras para cada color
+            mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+            mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
+            mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
+            mask_red = cv2.bitwise_or(mask_red1, mask_red2)
+            mask_green = cv2.inRange(hsv, lower_green, upper_green)
 
-                    if 0 <= mean_hsv[0] < 30 or 160 <= mean_hsv[0] <= 180:
-                        color = (0, 0, 255)
-                        signal_value.data = 0.0
-                        print("Rojo Detectado")
+            masks = [mask_yellow, mask_red, mask_green]
+            signal_values = [0.5, 0.0, 1.0]  # Amarillo, Rojo, Verde
+            detected_signal = None
 
-                    elif 35 <= mean_hsv[0] <= 55:
-                        color = (0, 255, 255)
-                        signal_value.data = 0.5
-                        print("Amarillo Detectado")
+            for idx, mask in enumerate(masks):
+                res = cv2.bitwise_and(resized_image, resized_image, mask=mask)
+                img = cv2.medianBlur(res, 5)
+                ccimg = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+                cimg = cv2.cvtColor(ccimg, cv2.COLOR_BGR2GRAY)
+                circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=22, minRadius=20, maxRadius=80)
 
-                    elif 60 <= mean_hsv[0] <= 85:
-                        color = (0, 255, 0)
-                        signal_value.data = 1.0
-                        print("Verde Detectado")
+                if circles is not None and len(circles[0]) > 0:
+                    detected_signal = signal_values[idx]
+                    circles = np.uint16(np.around(circles))
+                    for i in circles[0, :]:
+                        cv2.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 2)
+                        cv2.circle(cimg, (i[0], i[1]), 2, (0, 0, 255), 3)
+                    break
 
-                    cv2.circle(image, (int(x), int(y)), int(r), color, 2)
-                    cv2.rectangle(image, (int(x) - int(r), int(y) - int(r)), (int(x) + int(r), int(y) + int(r)), color, 2)
+            # Publicar la imagen procesada
+            self.traffic_light_pub.publish(self.bridge.cv2_to_imgmsg(resized_image, "bgr8"))
 
-                    if color in [(0, 0, 255), (0, 255, 255), (0, 255, 0)]:
-                        cv2.putText(image, "Semaforo en", (int(x) - int(r), int(y) - int(r) - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            # Publicar la señal del semáforo
+            if detected_signal is not None:
+                self.traffic_light_signal.data = detected_signal
             else:
-                print("Nothing detected")
+                self.traffic_light_signal.data = 1.0  # Default to green if no signal detected
 
-            self.traffic_light_pub.publish(self.bridge.cv2_to_imgmsg(image, "bgr8"))
-            self.signal_pub.publish(signal_value)
+            self.signal_pub.publish(self.traffic_light_signal)
 
 def main(args=None):
     rclpy.init(args=args)
