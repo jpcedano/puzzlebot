@@ -19,6 +19,14 @@ class ObjectDetection(Node):
         self.distance_pub = self.create_publisher(Float32, '/object_detection/distance', 10)
         self.face_cascade = cv2.CascadeClassifier('C:/Users/rodri/anaconda3/pkgs/libopencv-4.9.0-qt6_py312hd35d245_612/Library/etc/haarcascades/haarcascade_frontalface_default.xml')
 
+        # Real-world size of the object (in inches)
+        self.real_object_width = 3.3  # Example: 3.3 inches
+        self.real_object_height = 2  # Example: 2 inches
+
+        # Focal length of the camera (in pixels) - You need to calibrate your camera to obtain this value
+        self.focal_length_width = 1000  # Example: 1000 pixels
+        self.focal_length_height = 1000  # Example: 1000 pixels
+
     def detect_color(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, lower_color, upper_color)
@@ -27,9 +35,9 @@ class ObjectDetection(Node):
         res = cv2.bitwise_and(frame, frame, mask=mask[:,:,0])
         return res
 
-    def calculate_distance(self, apparent_size, real_size_width, real_size_height, focal_length_width, focal_length_height):
-        distance_width = (real_size_width * focal_length_width) / apparent_size[0]
-        distance_height = (real_size_height * focal_length_height) / apparent_size[1]
+    def calculate_distance(self, apparent_size):
+        distance_width = (self.real_object_width * self.focal_length_width) / apparent_size[0]
+        distance_height = (self.real_object_height * self.focal_length_height) / apparent_size[1]
         distance = (distance_width + distance_height) / 2
         return distance
 
@@ -51,7 +59,7 @@ class ObjectDetection(Node):
         for contour in filtered_contours:
             x,y,w,h = cv2.boundingRect(contour)
             apparent_size = (w, h)
-            distance = self.calculate_distance(apparent_size, real_object_width, real_object_height, focal_length_width, focal_length_height)
+            distance = self.calculate_distance(apparent_size)
             distance_msg = Float32()
             distance_msg.data = distance
             self.distance_pub.publish(distance_msg)
