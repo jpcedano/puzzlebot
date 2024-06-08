@@ -1,8 +1,7 @@
-[INFO] [1717829921.333815611] [TrafficLightDetector_node]: Traffic Light Detector Node started
 Traceback (most recent call last):
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/proyecto_final/semaforos", line 11, in <module>
-    load_entry_point('proyecto-final==0.0.0', 'console_scripts', 'semaforos')()
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 108, in main
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/proyecto_final/velocidad", line 11, in <module>
+    load_entry_point('proyecto-final==0.0.0', 'console_scripts', 'velocidad')()
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/velocidad.py", line 185, in main
     rclpy.spin(node)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/__init__.py", line 222, in spin
     executor.spin_once()
@@ -18,9 +17,6 @@ Traceback (most recent call last):
     await await_or_execute(tmr.callback)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 107, in await_or_execute
     return callback(*args)
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 41, in timer_callback
-    result_frame, signal_value = self.detect_colored_circles(frame)
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/semaforos.py", line 103, in detect_colored_circles
-    return frame, signal_value
-UnboundLocalError: local variable 'signal_value' referenced before assignment
-[ros2run]: Process exited with failure 1
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/velocidad.py", line 70, in timer_callback
+    self.robot_vel.linear.x = 0.15*signal_value  # Adjusted forward speed
+UnboundLocalError: local variable 'sign
