@@ -85,9 +85,9 @@ class LineFollower(Node):
                 self.cmd_vel_pub.publish(self.robot_vel)
 
         elif self.objeto_detectado:
-                        angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
-                        self.angulo += angulo_actual
-                        print("Angulo: ", angulo_actual)
+            angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
+            self.angulo += angulo_actual
+            print("Angulo: ", angulo_actual)
             if self.contour == False and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
