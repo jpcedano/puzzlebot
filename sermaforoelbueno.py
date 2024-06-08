@@ -64,6 +64,9 @@ class TrafficLightDetector(Node):
         mask_red = cv2.bitwise_or(mask_red1, mask_red2)
         mask_yellow = cv2.inRange(hsv, yellow_lower, yellow_upper)
 
+        # Initialize signal value
+        signal_value = None
+
         # Apply Gaussian Blur to reduce noise
         blurred = cv2.GaussianBlur(frame, (9, 9), 2)
 
