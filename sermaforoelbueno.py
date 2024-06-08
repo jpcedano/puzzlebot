@@ -11,7 +11,7 @@ class TrafficLightDetector(Node):
         super().__init__('TrafficLightDetector_node')
 
         # Cambiar el nombre del tópico de suscripción a "/videosource/raw"
-        self.image_sub = self.create_subscription(Image, '/videosource/raw', self.camera_callback, 10)
+        self.image_sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
 
         self.image_pub = self.create_publisher(Image, '/traffic_light_image', 10)
         self.signal_pub = self.create_publisher(Float32, '/traffic_light_signal', 10)
@@ -68,7 +68,7 @@ class TrafficLightDetector(Node):
         mask_yellow = cv2.inRange(hsv, yellow_lower, yellow_upper)
 
         # Initialize signal value
-        signal_value = None
+        signal_value = Float32()
 
         # Apply Gaussian Blur to reduce noise
         blurred = cv2.GaussianBlur(frame, (9, 9), 2)
