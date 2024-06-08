@@ -13,21 +13,15 @@ class LineFollower(Node):
         self.error_sub = self.create_subscription(Int32, 'error', self.error_callback, 10)
         self.contour_sub = self.create_subscription(Bool, 'FindContour', self.contour_callback, 10)
         self.objetos_sub = self.create_subscription(String, 'detected_labels', self.objetos_callback, 10)
+        self.semaforo_sub = self.create_subscription(Float32,'signal_value',self.semaforo_callback,10)
 
         qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', qos_profile)
-
-        qos_profile_enc = rclpy.qos.qos_profile_sensor_data
-        self.wl_subscripton = self.create_subscription(Float32, '/VelocityEncL',self.wl_callback, qos_profile_enc)
-        self.rl_subscripton = self.create_subscription(Float32, '/VelocityEncR',self.wr_callback, qos_profile_enc)
-
-        self.wl = 0.0
-        self.wr = 0.0
-        self.angulo_actual = 0.0
-        self.angulo = 0.0
         
         self.robot_vel = Twist()
         self.error = 0
+        self.semaforo = ""
+        self.semaforo_detectado = ""
         self.contour = False
         self.objetos = ""
         self.objeto_detectado = ""
@@ -37,7 +31,7 @@ class LineFollower(Node):
         self.straight_signal_detected = False
         self.stop_signal_detected = False
 
-        dt = 0.1
+        dt = 0.1 
         self.timer = self.create_timer(dt, self.timer_callback)
 
     def error_callback(self, msg):
@@ -51,43 +45,33 @@ class LineFollower(Node):
         self.objetos = self.objetos.split(", ")
         self.objeto_detectado = self.objetos[0]
 
-    def wl_callback(self,msg):
-        self.wl = msg.data
+    def semaforo_callback(self,msg):
+        self.semaforo = msg.data
 
-    def wr_callback(self,msg):
-        self.wr = msg.data   
 
-    def timer_callback(self): 
+    def timer_callback(self):
 
-        wl = self.wl
-        wr = self.wr
-        radio_llanta = 0.05
-        distancia_llantas = 0.19
-        diferencial_tiempo = 0.01
-        angulo_actual = self.angulo_actual
+        if self.semaforo == "green_light":
+            signal_value = 1.0
+        elif self.semaforo == "yellow_light":
+            signal_value = 0.5
+        elif self.semaforo == "red_light":
+            signal_value = 0.0
 
-        
-        #print("Round Flag: ",self.round_signal_detected)
-        #print("Stop Flag: ",self.stop_signal_detected) 
-        #print("Turn Left: ", self.turnleft_signal_detected)
-        #print("Straight Flag: ",self.straight_signal_detected)
-
-        print(self.objeto_detectado)
         if self.contour:
             if (self.objeto_detectado == 'workers_sgl'):
                 #print("workers")
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
                 self.robot_vel.linear.x = 0.05 # Adjusted forward speed   
-                self.cmd_vel_pub.publish(self.robot_vel)         
+                self.cmd_vel_pub.publish(self.robot_vel)   
+                                
             else:
                 self.robot_vel.angular.z = (-float(self.error) / 400)  # P-controller for steering
-                self.robot_vel.linear.x = 0.1  # Adjusted forward speed
+                self.robot_vel.linear.x = 0.15*signal_value  # Adjusted forward speed
                 self.cmd_vel_pub.publish(self.robot_vel)
 
         elif self.objeto_detectado:
-            angulo_actual = (radio_llanta*((wl - wr)/distancia_llantas)*diferencial_tiempo)
-            self.angulo += angulo_actual
-            print("Angulo: ", angulo_actual)
+            #print("Angulo: ", angulo_actual)
             if self.contour == False and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
@@ -105,17 +89,16 @@ class LineFollower(Node):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
                         self.cmd_vel_pub.publish(self.robot_vel)
-
-                    while self.angulo <= 90.0:
-                        #print("Turning in Intersection")
+                    
+                    for j in range(1350):
+                        #print("Turn Left")
                         self.robot_vel.angular.z = 0.05
                         self.robot_vel.linear.x = 0.0
-                        self.cmd_vel_pub.publish(self.robot_vel)
+                        self.cmd_vel_pub.publish(self.robot_vel)                    
 
                 
                     if (self.objeto_detectado != 'turnleft_sgl'):
                         self.turnleft_signal_detected = False
-                        self.angulo = 0.0
 
             
 
