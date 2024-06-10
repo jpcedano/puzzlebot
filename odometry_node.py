@@ -55,6 +55,8 @@ class OdometryNode(Node):
         angulo_actual = self.angulo_actual
 
         if self.objeto_detectado == 'turnleft_sgl' or self.objeto_detectado == 'round_sgl':
+            flag = True
+        if flag == True:
             angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
             self.angulo += angulo_actual
             # Publish the angle
@@ -63,6 +65,7 @@ class OdometryNode(Node):
             self.angle_publisher.publish(angle_msg)
         if self.objeto_detectado == 'workers_sgl':
             self.angulo = 0.0
+            flag == False
 
         print("Angulo Actual: ", angulo)
 
