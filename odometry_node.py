@@ -1,19 +1,16 @@
 import rclpy
 import math
-import numpy as np
 from rclpy.node import Node
-from std_msgs.msg import Float32,String,Bool
-
+from std_msgs.msg import Float32, String, Bool
 
 class OdometryNode(Node):
     def __init__(self):
         super().__init__('odometry_node')
         self.angle_publisher = self.create_publisher(Float32, 'odom_angle', 10)
 
-        self.objetos_sub = self.create_subscription(String,'detected_labels',self.objetos_callback,10)
-        self.contour_sub = self.create_subscription(Bool,'FindContour',self.contour_callback,10)
-       
-        
+        self.objetos_sub = self.create_subscription(String, 'detected_labels', self.objetos_callback, 10)
+        self.contour_sub = self.create_subscription(Bool, 'FindContour', self.contour_callback, 10)
+
         qos_profile = rclpy.qos.qos_profile_sensor_data
         self.wl_subscription = self.create_subscription(Float32, '/VelocityEncL', self.wl_callback, qos_profile)
         self.wr_subscription = self.create_subscription(Float32, '/VelocityEncR', self.wr_callback, qos_profile)
@@ -32,7 +29,6 @@ class OdometryNode(Node):
 
         self.timer = self.create_timer(self.timer_period, self.odometry_node)
 
-
     def wl_callback(self, msg):
         self.wl = msg.data
 
@@ -40,11 +36,13 @@ class OdometryNode(Node):
         self.wr = msg.data
 
     def objetos_callback(self, msg):
-        self.objetos = msg.data
-        self.objetos = self.objetos.split(", ")
-        self.objeto_detectado = self.objetos[0]
+        self.objetos = msg.data.split(", ")
+        if self.objetos:
+            self.objeto_detectado = self.objetos[0]
+        else:
+            self.objeto_detectado = ""
 
-    def contour_callback(self,msg):
+    def contour_callback(self, msg):
         self.contour = msg.data
 
     def odometry_node(self):
@@ -56,19 +54,17 @@ class OdometryNode(Node):
         diferencial_tiempo = 0.01
         angulo_actual = self.angulo_actual
 
-        if self.objeto_detectado == 'turnleft_sgl' or 'round_sgl':
-            angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo)*180/math.pi)
+        if self.objeto_detectado == 'turnleft_sgl' or self.objeto_detectado == 'round_sgl':
+            angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
             self.angulo += angulo_actual
             # Publish the angle
             angle_msg = Float32()
             angle_msg.data = self.angulo
             self.angle_publisher.publish(angle_msg)
         if self.objeto_detectado == 'workers_sgl':
-                self.angulo = 0.0
-        
+            self.angulo = 0.0
+
         print("Angulo Actual: ", angulo)
-
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -80,7 +76,6 @@ def main(args=None):
     finally:
         odometry_subscriber.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
