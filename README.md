@@ -1,7 +1,8 @@
+puzzlebot@jetson:~/proyecto_final$ ros2 run proyecto_final odometry 
 Traceback (most recent call last):
   File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/proyecto_final/odometry", line 11, in <module>
     load_entry_point('proyecto-final==0.0.0', 'console_scripts', 'odometry')()
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/odometry.py", line 76, in main
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/odometry.py", line 79, in main
     rclpy.spin(odometry_subscriber)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/__init__.py", line 222, in spin
     executor.spin_once()
@@ -17,7 +18,9 @@ Traceback (most recent call last):
     await await_or_execute(tmr.callback)
   File "/opt/ros/humble/lib/python3.8/site-packages/rclpy/executors.py", line 107, in await_or_execute
     return callback(*args)
-  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/odometry.py", line 59, in odometry_node
-    if flag == True:
-UnboundLocalError: local variable 'flag' referenced before assignment
+  File "/home/puzzlebot/proyecto_final/install/proyecto_final/lib/python3.8/site-packages/proyecto_final/odometry.py", line 71, in odometry_node
+    angle_msg.data = self.angulo
+  File "/opt/ros/humble/lib/python3.8/site-packages/std_msgs/msg/_float32.py", line 123, in data
+    assert \
+AssertionError: The 'data' field must be of type 'float'
 [ros2run]: Process exited with failure 1
