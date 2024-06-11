@@ -36,7 +36,7 @@ class LineFollower(Node):
         if self.image_received_flag:
             image = self.cv_img.copy()
 
-            region_of_interest = image[320:360,70:200]
+            region_of_interest = image[320:350,70:200]
             gray = cv2.cvtColor(region_of_interest, cv2.COLOR_BGR2GRAY)
             _, thresholded = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
         
