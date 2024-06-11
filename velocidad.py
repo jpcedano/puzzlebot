@@ -14,7 +14,6 @@ class LineFollower(Node):
         self.contour_sub = self.create_subscription(Bool, 'FindContour', self.contour_callback, 10)
         self.objetos_sub = self.create_subscription(String, 'detected_labels', self.objetos_callback, 10)
         self.semaforo_sub = self.create_subscription(String, 'signal_value', self.semaforo_callback, 10)
-        self.angle_publisher = self.create_subscription(Float32, 'odom_angle', self.angulo_callback,10)
 
         qos_profile2 = rclpy.qos.qos_profile_sensor_data
         self.wl_subscription = self.create_subscription(Float32, '/VelocityEncL', self.wl_callback, qos_profile2)
@@ -58,9 +57,6 @@ class LineFollower(Node):
     def semaforo_callback(self, msg):
         self.semaforo_detectado = msg.data
         print("Semaforo callback - color:", self.semaforo_detectado)
-
-    def angulo_callback(self, msg):
-        self.angulo = msg.data
 
     def wl_callback(self, msg):
         self.wl = msg.data
