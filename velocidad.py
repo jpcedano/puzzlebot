@@ -4,6 +4,7 @@ from std_msgs.msg import Int32, Bool, String, Float32
 from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 import time
+import math
 
 class LineFollower(Node):
     def __init__(self):
@@ -15,6 +16,9 @@ class LineFollower(Node):
         self.semaforo_sub = self.create_subscription(String, 'signal_value', self.semaforo_callback, 10)
         self.angle_publisher = self.create_subscription(Float32, 'odom_angle', self.angulo_callback,10)
 
+        qos_profile2 = rclpy.qos.qos_profile_sensor_data
+        self.wl_subscription = self.create_subscription(Float32, '/VelocityEncL', self.wl_callback, qos_profile2)
+        self.wr_subscription = self.create_subscription(Float32, '/VelocityEncR', self.wr_callback, qos_profile2)
 
         qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', qos_profile)
@@ -26,7 +30,12 @@ class LineFollower(Node):
         self.objetos = ""
         self.objeto_detectado = ""
         self.semaforo_value = 1.0
+        self.wl = 0.0
+        self.wr = 0.0
+        self.angulo_actual = 0.0
         self.angulo = 0.0
+
+
 
 
         self.turnleft_signal_detected = False  # Flag for turn left signal detection
@@ -55,7 +64,21 @@ class LineFollower(Node):
     def angulo_callback(self, msg):
         self.angulo = msg.data
 
+    def wl_callback(self, msg):
+        self.wl = msg.data
+
+    def wr_callback(self, msg):
+        self.wr = msg.data
+
     def timer_callback(self):
+
+        wl = self.wl
+        wr = self.wr
+        angulo = self.angulo
+        radio_llanta = 0.05
+        distancia_llantas = 0.19
+        diferencial_tiempo = 0.01
+        angulo_actual = self.angulo_actual
 
         if self.contour:
             if self.objeto_detectado == 'workers_sgl':
@@ -80,45 +103,51 @@ class LineFollower(Node):
             if not self.contour and self.objeto_detectado == 'turnleft_sgl':
                 if not self.turnleft_signal_detected:
                     self.turnleft_signal_detected = True  # Set flag to True
-                    start_time = time.time()
-                    duration = 0.4
 
-                    for _ in range(200):
-                        self.robot_vel.angular.z = -0.01
-                        self.robot_vel.linear.x = 0.0
-                        self.cmd_vel_pub.publish(self.robot_vel)
+                    angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
+                    self.angulo += angulo_actual
 
-                    for _ in range(500):
-                        self.robot_vel.angular.z = 0.0
-                        self.robot_vel.linear.x = 0.1
-                        self.cmd_vel_pub.publish(self.robot_vel)
+                    # for _ in range(200):
+                    #     self.robot_vel.angular.z = -0.01
+                    #     self.robot_vel.linear.x = 0.0
+                    #     self.cmd_vel_pub.publish(self.robot_vel)
 
-                    while self.angulo <= 75.0:
-                        self.robot_vel.angular.z = 0.05
-                        self.robot_vel.linear.x = 0.0
+                    # for _ in range(500):
+                    #     self.robot_vel.angular.z = 0.0
+                    #     self.robot_vel.linear.x = 0.1
+                    #     self.cmd_vel_pub.publish(self.robot_vel)
+
+                    if self.angulo <= 120.0:
+                        self.robot_vel.angular.z = 0.11
+                        self.robot_vel.linear.x = 0.06
                         self.cmd_vel_pub.publish(self.robot_vel)
-                        print("valor: 1 ", self.angulo)
-                    print("valor: 2 ", self.angulo)
 
                 
                     if self.objeto_detectado != 'turnleft_sgl':
                         self.turnleft_signal_detected = False
+                        self.angulo = 0
+                        
 
             elif not self.contour and self.objeto_detectado == 'round_sgl':
                 if not self.round_signal_detected:
                     self.round_signal_detected = True  # Set flag to True
-                    for _ in range(200):
-                        self.robot_vel.angular.z = 0.0
-                        self.robot_vel.linear.x = 0.1
-                        self.cmd_vel_pub.publish(self.robot_vel)
 
-                    for _ in range(1300):
-                        self.robot_vel.angular.z = -0.05
-                        self.robot_vel.linear.x = 0.0
+                    angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
+                    self.angulo += angulo_actual
+
+                    # for _ in range(200):
+                    #     self.robot_vel.angular.z = 0.0
+                    #     self.robot_vel.linear.x = 0.1
+                    #     self.cmd_vel_pub.publish(self.robot_vel)
+
+                    if self.angulo >= -145.0:
+                        self.robot_vel.angular.z = -0.12
+                        self.robot_vel.linear.x = 0.06
                         self.cmd_vel_pub.publish(self.robot_vel)
                 
                     if self.objeto_detectado != 'round_sgl':
                         self.round_signal_detected = False
+                        self.angulo = 0
 
             elif not self.contour and self.objeto_detectado == 'straight_sgl':
                 if not self.straight_signal_detected:
