@@ -36,8 +36,6 @@ class LineFollower(Node):
         self.angulo = 0.0
 
 
-
-
         self.turnleft_signal_detected = False  # Flag for turn left signal detection
         self.round_signal_detected = False
         self.straight_signal_detected = False
@@ -71,7 +69,6 @@ class LineFollower(Node):
         self.wr = msg.data
 
     def timer_callback(self):
-
         wl = self.wl
         wr = self.wr
         angulo = self.angulo
@@ -107,38 +104,21 @@ class LineFollower(Node):
                     angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
                     self.angulo += angulo_actual
 
-                    # for _ in range(200):
-                    #     self.robot_vel.angular.z = -0.01
-                    #     self.robot_vel.linear.x = 0.0
-                    #     self.cmd_vel_pub.publish(self.robot_vel)
-
-                    # for _ in range(500):
-                    #     self.robot_vel.angular.z = 0.0
-                    #     self.robot_vel.linear.x = 0.1
-                    #     self.cmd_vel_pub.publish(self.robot_vel)
-
                     if self.angulo <= 120.0:
                         self.robot_vel.angular.z = 0.11
                         self.robot_vel.linear.x = 0.06
                         self.cmd_vel_pub.publish(self.robot_vel)
 
-                
                     if self.objeto_detectado != 'turnleft_sgl':
                         self.turnleft_signal_detected = False
                         self.angulo = 0
                         
-
             elif not self.contour and self.objeto_detectado == 'round_sgl':
                 if not self.round_signal_detected:
                     self.round_signal_detected = True  # Set flag to True
 
                     angulo_actual = ((radio_llanta * ((wr - wl) / distancia_llantas) * diferencial_tiempo) * 180 / math.pi)
                     self.angulo += angulo_actual
-
-                    # for _ in range(200):
-                    #     self.robot_vel.angular.z = 0.0
-                    #     self.robot_vel.linear.x = 0.1
-                    #     self.cmd_vel_pub.publish(self.robot_vel)
 
                     if self.angulo >= -145.0:
                         self.robot_vel.angular.z = -0.12
@@ -179,12 +159,7 @@ class LineFollower(Node):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.0
                         self.cmd_vel_pub.publish(self.robot_vel)
-
-                    #for _ in range(200):
-                        #self.robot_vel.angular.z = -0.05
-                        #self.robot_vel.linear.x = 0.0
-                        #self.cmd_vel_pub.publish(self.robot_vel)                
-
+                
                     for _ in range(1000):
                         self.robot_vel.angular.z = 0.0
                         self.robot_vel.linear.x = 0.1
