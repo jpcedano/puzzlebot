@@ -6,7 +6,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 import time
 import math
 
-class LineFollower(Node):
+class Velocidad(Node):
     def __init__(self):
         super().__init__('velocity_node')
 
@@ -178,7 +178,7 @@ class LineFollower(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = LineFollower()
+    node = Velocidad()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
